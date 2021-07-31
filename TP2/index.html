@@ -1,0 +1,143 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset='utf-8'/>
+    <style>
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+        }
+
+        canvas {
+            position: absolute;
+            left: 0;
+            right: 0;
+        }
+    </style>
+</head>
+
+<body style="margin:0px">
+    <canvas id = "my_Canvas" width = "1024" height = "768">
+        Your browser does not support the HTML5 canvas element.
+    </canvas>
+
+    <script type="text/javascript" src="js/utils/gl-matrix-min.js"></script>
+    <script type="text/javascript">
+        const {mat2, mat3, mat4, quat, quat2, vec2, vec3, vec4} = glMatrix;
+    </script>
+    
+    <script type="text/javascript" src="js/core/directionalLighting.js"></script>
+    <script type="text/javascript" src="js/core/glCamera.js"></script>
+    <script type="text/javascript" src="js/core/glNode.js"></script>
+    <script type="text/javascript" src="js/core/scene.js"></script>
+    <script type="text/javascript" src="js/core/shaderManipulator.js"></script>
+    <script type="text/javascript" src="js/core/textures.js"></script>
+
+    <script type="text/javascript" src="js/curves/bezier.js"></script>
+    <script type="text/javascript" src="js/curves/bspline.js"></script>
+    <script type="text/javascript" src="js/curves/curves.js"></script>
+    <script type="text/javascript" src="js/curves/discretizer.js"></script>
+
+    <script type="text/javascript" src="js/objects3D/cabin.js"></script>
+    <script type="text/javascript" src="js/objects3D/crane.js"></script>
+    <script type="text/javascript" src="js/objects3D/cube.js"></script>
+    <script type="text/javascript" src="js/objects3D/edifice.js"></script>
+    <script type="text/javascript" src="js/objects3D/terrain.js"></script>
+    <script type="text/javascript" src="js/objects3D/extrusion.js"></script>
+    <script type="text/javascript" src="js/objects3D/Slab.js"></script>
+    <script type="text/javascript" src="js/objects3D/slide.js"></script>
+
+    <script type="text/javascript" src="js/parametrics/cylinder.js"></script>
+    <script type="text/javascript" src="js/surface/surface.js"></script>
+    <script type="text/javascript" src="js/utils/glUtils.js"></script>
+    <script type="text/javascript" src="js/utils/dat.gui.min.js"></script>
+
+    <script id="vertexShader" type="x-shader/x-vertex">
+        // An atribute will receive data from a position buffer.
+        attribute vec3 position;
+
+        uniform mat4 PVMmatrix;
+        uniform mat4 Model_Matrix;
+
+        uniform mat4 u_worldInverseTranspose;
+
+        // attribute vec3 color;
+        // varying vec3 vColor;
+        
+        attribute vec3 normal;
+        varying vec3 vNormal;
+
+        void main(void) {
+            // gl_Position is a special letiable a vertex shader
+            // is responsible for setting.
+            gl_Position = PVMmatrix*Model_Matrix*vec4(position, 1.);
+            // vColor = color;
+            vNormal = mat3(u_worldInverseTranspose) * normal;
+        }
+    </script>
+
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        // fragment shaders don't have a default precision so we need to pick one.
+        precision mediump float;
+        // varying vec3 vColor;
+
+        varying vec3 vNormal;
+
+        uniform vec4 u_color;
+        uniform vec3 u_reverseLightDirection;
+
+        void main(void) {
+            float light = dot(normalize(vNormal), u_reverseLightDirection);
+
+            // Luz direccional.
+            gl_FragColor = u_color;
+            // Multiplicar el color, no el alpha por la luz.
+            gl_FragColor.rgb *= light;
+
+            // Luz ambiente.
+            gl_FragColor += u_color*0.2;
+        }
+    </script>
+
+    <script id="vertexShaderTextures" type="x-shader/x-vertex">
+        attribute vec3 position;
+
+        uniform mat4 PVMmatrix;
+        uniform mat4 Model_Matrix;
+        uniform mat4 u_worldInverseTranspose;
+        attribute vec2 a_texcoord;
+
+        attribute vec3 normal;
+        varying vec3 vNormal;
+
+        varying vec2 v_texcoord;
+
+        void main(void) {
+            gl_Position = PVMmatrix*Model_Matrix*vec4(position, 1.);
+            vNormal = mat3(u_worldInverseTranspose) * normal;
+            v_texcoord = a_texcoord;
+        }
+    </script>
+
+    <script id="fragmentShaderTextures" type="x-shader/x-fragment">
+        precision mediump float;
+
+        varying vec3 vNormal;
+        varying vec2 v_texcoord;
+
+        uniform vec4 u_color;
+        uniform vec3 u_reverseLightDirection;
+        uniform sampler2D u_texture;
+
+        void main(void) {
+            float light = dot(normalize(vNormal), u_reverseLightDirection);
+
+            gl_FragColor = texture2D(u_texture, v_texcoord);
+            gl_FragColor.rgb *= light;
+        }
+    </script>
+
+    <script type="text/javascript" src="js/App.js"></script>
+   </body>
+</html>
