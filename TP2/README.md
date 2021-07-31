@@ -3,6 +3,7 @@ Sistemas Gráficos - FIUBA - 1°C 2021
 Manuel Ferrero
 
 **Interacción con el usuario**
+
 **Teclado**
 - *1*: seleccionar cámara drone.
 - *2*: seleccionar cámara orbital.
