@@ -27,11 +27,12 @@
         const {mat2, mat3, mat4, quat, quat2, vec2, vec3, vec4} = glMatrix;
     </script>
     
+    <script type="text/javascript" src="js/core/CubeMaps.js"></script>
     <script type="text/javascript" src="js/core/directionalLighting.js"></script>
     <script type="text/javascript" src="js/core/glCamera.js"></script>
     <script type="text/javascript" src="js/core/glNode.js"></script>
     <script type="text/javascript" src="js/core/scene.js"></script>
-    <script type="text/javascript" src="js/core/shaderManipulator.js"></script>
+    <script type="text/javascript" src="js/core/ShaderManipulator.js"></script>
     <script type="text/javascript" src="js/core/textures.js"></script>
 
     <script type="text/javascript" src="js/curves/bezier.js"></script>
@@ -47,94 +48,362 @@
     <script type="text/javascript" src="js/objects3D/extrusion.js"></script>
     <script type="text/javascript" src="js/objects3D/Slab.js"></script>
     <script type="text/javascript" src="js/objects3D/slide.js"></script>
+    <script type="text/javascript" src="js/objects3D/window.js"></script>
 
     <script type="text/javascript" src="js/parametrics/cylinder.js"></script>
     <script type="text/javascript" src="js/surface/surface.js"></script>
     <script type="text/javascript" src="js/utils/glUtils.js"></script>
     <script type="text/javascript" src="js/utils/dat.gui.min.js"></script>
 
-    <script id="vertexShader" type="x-shader/x-vertex">
-        // An atribute will receive data from a position buffer.
-        attribute vec3 position;
-
-        uniform mat4 PVMmatrix;
-        uniform mat4 Model_Matrix;
-
-        uniform mat4 u_worldInverseTranspose;
-
-        // attribute vec3 color;
-        // varying vec3 vColor;
+    <script id="vertexShaderBasic" type="x-shader/x-vertex">
+        attribute vec3 a_position;
+        attribute vec3 a_normal;
         
-        attribute vec3 normal;
-        varying vec3 vNormal;
+        uniform mat4 u_PV_matrix;
+        uniform mat4 u_model_matrix;
+        uniform mat4 u_world_inv_transpose;
+        
+        varying vec3 v_normal;
 
         void main(void) {
-            // gl_Position is a special letiable a vertex shader
-            // is responsible for setting.
-            gl_Position = PVMmatrix*Model_Matrix*vec4(position, 1.);
-            // vColor = color;
-            vNormal = mat3(u_worldInverseTranspose) * normal;
+            gl_Position = u_PV_matrix * u_model_matrix * vec4(a_position, 1.);
+
+            v_normal = mat3(u_world_inv_transpose) * a_normal;
         }
     </script>
 
-    <script id="fragmentShader" type="x-shader/x-fragment">
-        // fragment shaders don't have a default precision so we need to pick one.
+    <script id="fragmentShaderBasic" type="x-shader/x-fragment">
         precision mediump float;
-        // varying vec3 vColor;
-
-        varying vec3 vNormal;
 
         uniform vec4 u_color;
-        uniform vec3 u_reverseLightDirection;
+        uniform vec3 u_reverse_light_dir;
+
+        varying vec3 v_normal;
 
         void main(void) {
-            float light = dot(normalize(vNormal), u_reverseLightDirection);
+            float light = dot(normalize(v_normal), u_reverse_light_dir);
 
-            // Luz direccional.
             gl_FragColor = u_color;
-            // Multiplicar el color, no el alpha por la luz.
+
             gl_FragColor.rgb *= light;
 
-            // Luz ambiente.
-            gl_FragColor += u_color*0.2;
+            gl_FragColor += u_color * 0.2;
         }
     </script>
 
-    <script id="vertexShaderTextures" type="x-shader/x-vertex">
-        attribute vec3 position;
-
-        uniform mat4 PVMmatrix;
-        uniform mat4 Model_Matrix;
-        uniform mat4 u_worldInverseTranspose;
+    <script id="vertexShaderTexture" type="x-shader/x-vertex">
+        attribute vec3 a_position;
+        attribute vec3 a_normal;
         attribute vec2 a_texcoord;
 
-        attribute vec3 normal;
-        varying vec3 vNormal;
-
+        uniform mat4 u_model_matrix;
+        uniform mat4 u_PV_matrix;
+        uniform mat4 u_world_inv_transpose;
+        
+        varying vec3 v_normal;
         varying vec2 v_texcoord;
 
         void main(void) {
-            gl_Position = PVMmatrix*Model_Matrix*vec4(position, 1.);
-            vNormal = mat3(u_worldInverseTranspose) * normal;
+            gl_Position = u_PV_matrix * u_model_matrix * vec4(a_position, 1.);
+
+            v_normal = mat3(u_world_inv_transpose) * a_normal;
+
             v_texcoord = a_texcoord;
         }
     </script>
 
-    <script id="fragmentShaderTextures" type="x-shader/x-fragment">
+    <script id="fragmentShaderTexture" type="x-shader/x-fragment">
         precision mediump float;
 
-        varying vec3 vNormal;
-        varying vec2 v_texcoord;
-
         uniform vec4 u_color;
-        uniform vec3 u_reverseLightDirection;
+        uniform vec3 u_reverse_light_dir;
         uniform sampler2D u_texture;
 
+        varying vec3 v_normal;
+        varying vec2 v_texcoord;
+
         void main(void) {
-            float light = dot(normalize(vNormal), u_reverseLightDirection);
+            float light = dot(normalize(v_normal), u_reverse_light_dir);
 
             gl_FragColor = texture2D(u_texture, v_texcoord);
+
             gl_FragColor.rgb *= light;
+        }
+    </script>
+
+    <script id="vertexShaderTexture2" type="x-shader/x-vertex">
+        attribute vec3 a_position;
+        attribute vec3 a_normal;
+        attribute vec2 a_texcoord;
+
+        uniform mat4 u_model_matrix;
+        uniform mat4 u_PV_matrix;
+        uniform mat4 u_world_inv_transpose;
+
+        varying vec3 v_normal;
+        varying vec2 v_texcoord;
+
+        void main(void) {
+            gl_Position = u_PV_matrix * u_model_matrix * vec4(a_position, 1.);
+
+            v_normal = mat3(u_world_inv_transpose) * a_normal;
+
+            v_texcoord = a_texcoord;
+        }
+    </script>
+
+    <script id="fragmentShaderTexture2" type="x-shader/x-fragment">        
+        precision mediump int;
+        precision mediump float;
+        
+        uniform vec4 u_color;
+        uniform vec3 u_reverse_light_dir;
+
+        uniform sampler2D u_texture_0;
+
+        varying vec2 v_texcoord;
+        varying vec3 v_normal;
+
+        float permute(float x0, vec3 p) {
+            return floor(mod((mod(x0 * p.y, p.x) + p.z) * x0, p.x));
+        }
+
+        vec2 permute(vec2 x0, vec3 p) {
+            return floor(mod((mod(x0 * p.y, p.x) + p.z) * x0, p.x));
+        }
+
+        vec3 permute(vec3 x0,vec3 p) {
+            return floor(mod((mod(x0 * p.y, p.x) + p.z) * x0, p.x));
+        }
+        
+        vec4 permute(vec4 x0,vec3 p) {
+            return floor(mod((mod(x0 * p.y, p.x) + p.z) *x0, p.x));
+        }
+        
+        const vec4 pParam = vec4(289.0, 34.0, 1.0, 7.0);
+        
+        float taylorInvSqrt(float r) {
+            return (1.434274331201278 - 0.85373472095314 * r);
+        }
+        
+        float simplexNoise2(vec2 v) {
+            const vec2 C = vec2(0.211324865405187134, 0.366025403784438597);
+            const vec3 D = vec3(0., 0.5, 2.0) * 3.14159265358979312;
+            
+            vec2 i = floor(v + dot(v, C.yy));
+            vec2 x0 = v - i + dot(i, C.xx);
+            
+            // vec2 i1  =  (x0.x > x0.y) ? vec2(1., 0.) : vec2(0., 1.);
+            vec2 i1 = vec2(1. ,0.);
+
+            vec2 x1 = x0 - i1 + 1. * C.xx;
+            vec2 x2 = x0 - 1. + 2. * C.xx;
+        
+            i = mod(i, pParam.x);
+            vec3 p = permute(permute(i.y + vec3(0., i1.y, 1. ), pParam.xyz)
+                            + i.x + vec3(0., i1.x, 1. ), pParam.xyz);
+        
+            vec3 x = fract(p / pParam.w);
+            vec3 h = 0.5 - abs(x);
+        
+            vec3 a0 = x + (vec3(lessThan(x, D.xxx)) * 2. - 1.) * vec3(lessThan(h, D.xxx));
+            vec2 p0 = vec2(a0.x, h.x);
+            vec2 p1 = vec2(a0.y, h.y);
+            vec2 p2 = vec2(a0.z, h.z);
+        
+            p0 *= taylorInvSqrt(dot(p0, p0));
+            p1 *= taylorInvSqrt(dot(p1, p1));
+            p2 *= taylorInvSqrt(dot(p2, p2));
+        
+            vec3 g = 2.0 * vec3(dot(p0, x0), dot(p1, x1), dot(p2, x2));
+            
+            vec3 m = max(0.5 - vec3(dot(x0, x0), dot(x1, x1), dot(x2, x2)), 0.);
+            m = m*m;
+            return (116.6662 * dot(m*m, g) + 1.) * 0.5;
+        }
+        
+        void main(void) {
+            float scale = 1.0;
+
+            vec3 paint_1 = texture2D(u_texture_0, v_texcoord).xyz;
+            vec3 paint_2 = texture2D(u_texture_0, v_texcoord*2.83).xyz;
+            // vec3 paint_3 = texture2D(u_texture_0, v_texcoord*5.09).xyz;
+
+            float noise_1 = simplexNoise2(v_texcoord*scale*4.23);
+            float noise_2 = simplexNoise2(v_texcoord*scale*8.11);
+            float mask = mix(noise_1, noise_2, 0.5);
+
+            vec3 color_combine = mix(paint_1, paint_2, mask);
+            // color_combine = mix(color_combine, paint_3, mask);
+        
+            float light = dot(normalize(v_normal), u_reverse_light_dir);
+
+            gl_FragColor = vec4(color_combine, 1.0);
+
+            gl_FragColor.rgb *= light;
+        }
+    </script>
+
+    <script id="vertexShaderTerrain" type="x-shader/x-vertex">
+        attribute vec3 a_position;
+        attribute vec3 a_normal;
+        attribute vec2 a_texcoord;
+
+        uniform mat4 u_model_matrix;
+        uniform mat4 u_PV_matrix;
+        uniform mat4 u_world_inv_transpose;
+
+        varying vec3 v_normal;
+        varying vec2 v_texcoord;
+
+        void main(void) {
+            gl_Position = u_PV_matrix * u_model_matrix * vec4(a_position, 1.);
+            v_normal = mat3(u_world_inv_transpose) * a_normal;
+            v_texcoord = a_texcoord;
+        }
+    </script>
+
+    <script id="fragmentShaderTerrain" type="x-shader/x-fragment">        
+        precision mediump int;
+        precision mediump float;
+        
+        uniform vec4 u_color;
+        uniform vec3 u_reverse_light_dir;
+
+        uniform sampler2D u_texture_0;
+        uniform sampler2D u_texture_1;
+        uniform sampler2D u_texture_2;
+
+        varying vec2 v_texcoord;
+        varying vec3 v_normal;
+
+        float permute(float x0, vec3 p) {
+            return floor(mod((mod(x0 * p.y, p.x) + p.z) * x0, p.x));
+        }
+
+        vec2 permute(vec2 x0, vec3 p) {
+            return floor(mod((mod(x0 * p.y, p.x) + p.z) * x0, p.x));
+        }
+
+        vec3 permute(vec3 x0,vec3 p) {
+            return floor(mod((mod(x0 * p.y, p.x) + p.z) * x0, p.x));
+        }
+        
+        vec4 permute(vec4 x0,vec3 p) {
+            return floor(mod((mod(x0 * p.y, p.x) + p.z) *x0, p.x));
+        }
+        
+        const vec4 pParam = vec4(289.0, 34.0, 1.0, 7.0);
+        
+        float taylorInvSqrt(float r) {
+            return (1.434274331201278 - 0.85373472095314 * r);
+        }
+        
+        float simplexNoise2(vec2 v) {
+            const vec2 C = vec2(0.211324865405187134, 0.366025403784438597);
+            const vec3 D = vec3(0., 0.5, 2.0) * 3.14159265358979312;
+            
+            vec2 i = floor(v + dot(v, C.yy));
+            vec2 x0 = v - i + dot(i, C.xx);
+            
+            // vec2 i1  =  (x0.x > x0.y) ? vec2(1., 0.) : vec2(0., 1.);
+            vec2 i1 = vec2(1. ,0.);
+
+            vec2 x1 = x0 - i1 + 1. * C.xx;
+            vec2 x2 = x0 - 1. + 2. * C.xx;
+        
+            i = mod(i, pParam.x);
+            vec3 p = permute(permute(i.y + vec3(0., i1.y, 1. ), pParam.xyz)
+                            + i.x + vec3(0., i1.x, 1. ), pParam.xyz);
+        
+            vec3 x = fract(p / pParam.w);
+            vec3 h = 0.5 - abs(x);
+        
+            vec3 a0 = x + (vec3(lessThan(x, D.xxx)) * 2. - 1.) * vec3(lessThan(h, D.xxx));
+            vec2 p0 = vec2(a0.x, h.x);
+            vec2 p1 = vec2(a0.y, h.y);
+            vec2 p2 = vec2(a0.z, h.z);
+        
+            p0 *= taylorInvSqrt(dot(p0, p0));
+            p1 *= taylorInvSqrt(dot(p1, p1));
+            p2 *= taylorInvSqrt(dot(p2, p2));
+        
+            vec3 g = 2.0 * vec3(dot(p0, x0), dot(p1, x1), dot(p2, x2));
+            
+            vec3 m = max(0.5 - vec3(dot(x0, x0), dot(x1, x1), dot(x2, x2)), 0.);
+            m = m*m;
+            return (116.6662 * dot(m*m, g) + 1.) * 0.5;
+        }
+        
+        void main(void)
+        {
+            float scale = 15.0;
+
+            vec3 gravel_1 = texture2D(u_texture_0, v_texcoord*25.0).xyz;
+            vec3 gravel_2 = texture2D(u_texture_0, v_texcoord*50.0).xyz;
+            vec3 grass_1 = texture2D(u_texture_1, v_texcoord*25.0).xyz;
+            vec3 grass_2 = texture2D(u_texture_1, v_texcoord*50.0).xyz;
+            vec3 moss_1 = texture2D(u_texture_2, v_texcoord*25.0).xyz;
+
+            vec3 color_grass = mix(grass_1, grass_2, 0.5);
+
+            float noise_1 = simplexNoise2(v_texcoord*scale);
+            float noise_2 = simplexNoise2(v_texcoord*scale*4.23);
+            float mask_1 = mix(noise_1, noise_2, 0.5);
+
+            vec3 color_gravel = mix(gravel_1, gravel_2, 0.5);
+            vec3 color_combine = mix(color_gravel, moss_1, mask_1);
+
+            float noise_3 = simplexNoise2(v_texcoord*scale*8.18);
+            float noise_4 = simplexNoise2(v_texcoord*scale*11.11);
+            float mask_2 = mix(noise_3, noise_4, 0.5);
+
+            color_combine = mix(color_combine, color_grass, mask_2);
+        
+            float light = dot(normalize(v_normal), u_reverse_light_dir);
+
+            gl_FragColor = vec4(color_combine, 1.0);
+
+            gl_FragColor.rgb *= light;
+        }
+    </script>
+
+    <script id="vertexShaderCubeMap" type="x-shader/x-vertex">
+        attribute vec3 a_position;
+        attribute vec3 a_normal;
+
+        uniform mat4 u_model_matrix;
+        uniform mat4 u_PV_matrix;
+        uniform mat4 u_world_inv_transpose;
+        
+        varying vec3 v_normal;
+        varying vec3 v_world_position;
+         
+        void main() {
+            gl_Position = u_PV_matrix * u_model_matrix * vec4(a_position, 1.);
+            
+            v_world_position = (u_model_matrix * vec4(a_position, 1.0)).xyz;
+            
+            v_normal = mat3(u_world_inv_transpose) * a_normal;
+        }
+    </script>
+
+    <script id="fragmentShaderCubeMap" type="x-shader/x-fragment">
+        precision mediump float;
+        
+        uniform vec3 u_worldCameraPosition;
+        
+        uniform samplerCube u_texture;
+
+        varying vec3 v_world_position;
+        varying vec3 v_normal;
+
+        void main() {
+            vec3 world_normal = normalize(v_normal);
+            vec3 eye_to_surface_dir = normalize(v_world_position - u_worldCameraPosition);
+            vec3 direction = reflect(eye_to_surface_dir, world_normal);
+            
+            gl_FragColor = textureCube(u_texture, direction);
         }
     </script>
 
